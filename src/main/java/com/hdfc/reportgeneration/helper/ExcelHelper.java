@@ -86,41 +86,90 @@ public class ExcelHelper {
 //        style.setFillForegroundColor(IndexedColors.RED.getIndex());
 
         XSSFCellStyle style=wb.createCellStyle();
-        style.setFillBackgroundColor(IndexedColors.RED.getIndex());
-        style.setFillPattern(FillPatternType.DIAMONDS);
+        style.setFillBackgroundColor(IndexedColors.LIGHT_ORANGE.getIndex());
+        style.setFillPattern(FillPatternType.FINE_DOTS);
         Sheet s1 = workbook.getSheetAt(0);
         Sheet s2 = workbook.getSheetAt(1);
+        Sheet s3 = workbook.getSheetAt(0);
+        int s1RowCount = s1.getLastRowNum();
+        int s2RowCount = s2.getLastRowNum();
+        if (s1RowCount > s2RowCount){
+            s1 = s2;
+            s2 = s3;
+        }
         Sheet sheet = wb.createSheet("report");
+        checkRow(s1, s2, sheet, style);
         //System.out.println("*********** Sheet Name : " + s1.getSheetName() + "*************" + s2.getSheetName());
-        int rowCounts = s2.getPhysicalNumberOfRows();
-        for (int j = 0; j < rowCounts; j++) {
+        //        FileOutputStream file = new FileOutputStream("d:\\report\\style.xlsx");
+        //        wb.write(file);
+        //        file.close();
+        return wb;
+    }
+
+    private  void  checkRow(Sheet s1, Sheet s2, Sheet sheet, XSSFCellStyle style){
+        int rowCounts1 = s1.getPhysicalNumberOfRows();
+        int rowCounts2 = s2.getPhysicalNumberOfRows();
+
+        for (int j = 0; j < rowCounts1; j++) {
             Row row = sheet.createRow(j);
             // Iterating through each cell
-            int cellCounts = s2.getRow(j).getPhysicalNumberOfCells();
-            for (int k = 0; k < cellCounts; k++) {
-                Cell c1 = s1.getRow(j).getCell(k);
-                Cell c2 = s2.getRow(j).getCell(k);
-                //Cell cell = row.createCell(k);
-                XSSFCell cell= (XSSFCell) row.createCell(k);
-
-
-                if (c2.getCellType().equals(c1.getCellType())) {
-                    getCell(c1,c2,cell,style);
-
-                } else
-                {
-                    // If cell types are not same, exit comparison
-                    System.out.println("Non matching cell type.");
+            int cellCounts1 = s1.getRow(j).getPhysicalNumberOfCells();
+            int cellCounts2 = s2.getRow(j).getPhysicalNumberOfCells();
+            if (cellCounts2 <= cellCounts1){
+                for (int k = 0; k < cellCounts2; k++) {
+                    Cell c1 = s1.getRow(j).getCell(k);
+                    Cell c2 = s2.getRow(j).getCell(k);
+                    //Cell cell = row.createCell(k);
+                    XSSFCell cell= (XSSFCell) row.createCell(k);
+                    if (c2.getCellType().equals(c1.getCellType())) {
+                        getCell(c1,c2,cell,style);
+                    } else
+                    {// If cell types are not same, exit comparison
+                        System.out.println("Non matching cell type.");
+                    }
                 }
-
+                if (cellCounts2 < cellCounts1){
+                    for (int k = cellCounts2; k < cellCounts1; k++) {
+                        Cell c1 = s1.getRow(j).getCell(k);
+                        XSSFCell cell= (XSSFCell) row.createCell(k);
+                        getCell(c1,cell,style);
+                    }
+                }
+            } else if (cellCounts2 > cellCounts1){
+                for (int k = 0; k < cellCounts1; k++) {
+                    Cell c1 = s1.getRow(j).getCell(k);
+                    Cell c2 = s2.getRow(j).getCell(k);
+                    //Cell cell = row.createCell(k);
+                    XSSFCell cell= (XSSFCell) row.createCell(k);
+                    if (c2.getCellType().equals(c1.getCellType())) {
+                        getCell(c1,c2,cell,style);
+                    } else
+                    {// If cell types are not same, exit comparison
+                        System.out.println("Non matching cell type.");
+                    }
+                }
+                if (cellCounts2 > cellCounts1){
+                    for (int k = cellCounts1; k < cellCounts2; k++) {
+                        Cell c2 = s2.getRow(j).getCell(k);
+                        XSSFCell cell= (XSSFCell) row.createCell(k);
+                        getCell(c2,cell,style);
+                    }
+                }
             }
         }
-
-
-//        FileOutputStream file = new FileOutputStream("d:\\report\\style.xlsx");
-//        wb.write(file);
-//        file.close();
-        return wb;
+        if (rowCounts1 < rowCounts2) {
+            for (int j = rowCounts1; j < rowCounts2; j++) {
+                Row row = sheet.createRow(j);
+                // Iterating through each cell
+                int cellCounts = s2.getRow(j).getPhysicalNumberOfCells();
+                for (int k = 0; k < cellCounts; k++) {
+                    Cell c2 = s2.getRow(j).getCell(k);
+                    //Cell cell = row.createCell(k);
+                    XSSFCell cell = (XSSFCell) row.createCell(k);
+                    getCell(c2, cell, style);
+                }
+            }
+        }
     }
     private void getCell(Cell c1,Cell c2,XSSFCell cell,XSSFCellStyle style){
 
@@ -161,6 +210,36 @@ public class ExcelHelper {
         if (c2.getCellType() == CellType.BOOLEAN) {
             boolean v1 = c1.getBooleanCellValue();
             boolean v2 = c2.getBooleanCellValue();
+            cell.setCellValue(c2.getBooleanCellValue());
+            //System.out.println("Its matched : "+ v1 + " === "+ v2);
+        }
+    }
+    private void getCell(Cell c2,XSSFCell cell,XSSFCellStyle style){
+
+        if (c2.getCellType() == CellType.STRING) {
+            cell.setCellStyle(style);
+            cell.setCellValue(c2.getStringCellValue());
+            //System.out.println("Its matched : "+ v1 + " === "+ v2);
+        }
+        if (c2.getCellType() == CellType.NUMERIC) {
+            // If cell type is numeric, we need to check if data is of Date type
+            if (DateUtil.isCellDateFormatted(c2)) {
+                // Need to use DataFormatter to get data in given style otherwise it will come as time stamp
+                DataFormatter df = new DataFormatter();
+                String v2 = df.formatCellValue(c2);
+                cell.setCellStyle(style);
+                cell.setCellValue(c2.getNumericCellValue());
+                // System.out.println("Its matched : "+ v1 + " === "+ v2);
+            } else {
+                double v2 = c2.getNumericCellValue();
+                cell.setCellStyle(style);
+                cell.setCellValue(c2.getNumericCellValue());
+                // System.out.println("Its matched : "+ v1 + " === "+ v2);
+            }
+        }
+        if (c2.getCellType() == CellType.BOOLEAN) {
+            boolean v2 = c2.getBooleanCellValue();
+            cell.setCellStyle(style);
             cell.setCellValue(c2.getBooleanCellValue());
             //System.out.println("Its matched : "+ v1 + " === "+ v2);
         }
